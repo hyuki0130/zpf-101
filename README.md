@@ -20,34 +20,34 @@
 
 ## 📚 튜토리얼 목차
 
-### [Chapter 1: 설치 가이드](./tutorial/01-installation.md)
+### [Chapter 1: 설치 가이드](./tutorials/01-installation.md)
 - Noir와 Zero-Knowledge Proof 개념
 - Noir/Nargo 설치
 - Barretenberg 백엔드 설치
 - 개발 환경 구축
 
-### [Chapter 2: 첫 프로젝트 생성과 기본 회로](./tutorial/02-first-project.md)
+### [Chapter 2: 첫 프로젝트 생성과 기본 회로](./tutorials/02-first-project.md)
 - Nargo로 프로젝트 생성
 - 회로의 기본 구조 이해
 - Private vs Public 입력
 - Witness 개념
 - 컴파일 및 실행
 
-### [Chapter 3: Noir 언어 기초](./tutorial/03-language-basics.md)
+### [Chapter 3: Noir 언어 기초](./tutorials/03-language-basics.md)
 - 데이터 타입 (Field, 정수, 배열, 구조체)
 - 함수와 제어 흐름
 - 연산자 사용법
 - 트레이트와 제네릭
 - Assert와 제약 조건
 
-### [Chapter 4: 증명 생성과 검증](./tutorial/04-proof-generation.md)
+### [Chapter 4: 증명 생성과 검증](./tutorials/04-proof-generation.md)
 - ZKP 동작 원리
 - Barretenberg를 사용한 증명 생성
 - 검증 키 이해
 - Solidity 검증 계약 생성
 - 실전 예제 (나이 검증, 투표 시스템)
 
-### [Chapter 5: 실전 웹 애플리케이션](./tutorial/05-web-application.md)
+### [Chapter 5: 실전 웹 애플리케이션](./tutorials/05-web-application.md)
 - NoirJS 소개
 - 브라우저 기반 ZKP 앱 개발
 - 나이 검증 웹 앱 구축
@@ -172,7 +172,7 @@ bb contract              # Solidity 계약 생성
 ```
 zpf-101/
 ├── README.md                    # 이 파일
-├── tutorial/                    # 튜토리얼 문서
+├── tutorials/                   # 튜토리얼 문서
 │   ├── 01-installation.md
 │   ├── 02-first-project.md
 │   ├── 03-language-basics.md
@@ -264,7 +264,7 @@ A: Noir는 활발히 개발 중이며, 많은 프로젝트에서 이미 사용�
 
 ## 🎉 시작하기
 
-준비되셨나요? [Chapter 1: 설치 가이드](./tutorial/01-installation.md)로 시작하세요!
+준비되셨나요? [Chapter 1: 설치 가이드](./tutorials/01-installation.md)로 시작하세요!
 
 ---
 
