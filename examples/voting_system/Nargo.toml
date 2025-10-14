@@ -1,0 +1,6 @@
+[package]
+name = "voting_system"
+type = "bin"
+authors = [""]
+
+[dependencies]

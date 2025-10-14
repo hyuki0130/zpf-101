@@ -123,38 +123,61 @@ target/
 └── age_verification.gz      # Witness 파일
 ```
 
-**5단계: 증명 생성**
+**5단계: 검증 키 생성** ⚠️ (증명 생성 전 필수!)
 
 ```bash
+bb write_vk -b ./target/age_verification.json -o ./target
+```
+
+**왜 먼저 필요한가?**
+- 최신 `bb` 버전에서는 증명 생성 시 검증 키가 필요
+- 회로 구조에 대한 정보를 포함
+- 한 번 생성하면 재사용 가능
+
+**처음 실행 시:**
+```
+Scheme is: ultra_honk, num threads: 14
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+100  256k  100  256k    0     0   609k      0 --:--:-- --:--:-- --:--:--  609k
+VK saved to "./target/vk"
+```
+
+**다운로드 내역**: CRS (Common Reference String) 파일 (한 번만 다운로드, 이후 캐시 사용)
+
+생성되는 파일:
+```
+target/
+├── age_verification.json
+├── age_verification.gz
+└── vk                        # 검증 키
+```
+
+**6단계: 증명 생성**
+
+**방법 1: 검증 키를 이미 생성한 경우**
+```bash
 bb prove -b ./target/age_verification.json -w ./target/age_verification.gz -o ./target
+```
+
+**방법 2: 검증 키와 증명을 동시에 생성**
+```bash
+bb prove -b ./target/age_verification.json -w ./target/age_verification.gz --write_vk -o ./target
 ```
 
 **명령어 분석:**
 - `-b`: 바이트코드 파일 경로 (ACIR)
 - `-w`: Witness 파일 경로
 - `-o`: 출력 디렉토리
+- `--write_vk`: 검증 키도 함께 생성 (선택사항)
 
 생성되는 파일:
 ```
 target/
 ├── age_verification.json
 ├── age_verification.gz
+├── vk                        # 검증 키 (이미 있거나 --write_vk로 생성)
 └── proof                     # 생성된 증명!
-```
-
-**6단계: 검증 키 생성**
-
-```bash
-bb write_vk -b ./target/age_verification.json -o ./target
-```
-
-생성되는 파일:
-```
-target/
-├── age_verification.json
-├── age_verification.gz
-├── proof
-└── vk                        # 검증 키
 ```
 
 **7단계: 증명 검증**
@@ -182,12 +205,14 @@ Proof verification successful!
 ### 키 생성 옵션
 
 ```bash
-# 증명 생성과 동시에 검증 키 생성
-bb prove -b ./target/circuit.json -w ./target/circuit.gz --write-vk -o ./target
-
-# 별도로 검증 키만 생성
+# 별도로 검증 키만 생성 (권장)
 bb write_vk -b ./target/circuit.json -o ./target
+
+# 증명 생성과 동시에 검증 키 생성
+bb prove -b ./target/circuit.json -w ./target/circuit.gz --write_vk -o ./target
 ```
+
+**참고**: 언더스코어(`_`)를 사용합니다: `--write_vk` (하이픈이 아님!)
 
 ## 🎭 Public Inputs 이해
 
@@ -271,10 +296,12 @@ nargo compile
 # Witness 생성
 nargo execute
 
-# 증명 생성 (검증 키도 함께 생성)
+# 검증 키 생성
+bb write_vk -b ./target/password_check.json -o ./target
+
+# 증명 생성
 bb prove -b ./target/password_check.json \
          -w ./target/password_check.gz \
-         --write-vk \
          -o ./target
 
 # 증명 검증
@@ -387,9 +414,13 @@ fn main(
 voter_id = "12345"
 secret_key = "67890"
 vote = "1"
-voter_commitment = "..." # pedersen_hash([12345, 67890])
-vote_hash = "..."         # pedersen_hash([12345, 1])
+voter_commitment = "0x0539222e70963aab30360452087fa38862c31537d679aa427324eb8622d34243"
+vote_hash = "0x0a2117377b0ea781202c90d57ddc28c4a98ad83879c0bc1132cca576ff99e9bf"
 ```
+
+**계산 방법:**
+- `voter_commitment = pedersen_hash([12345, 67890])`
+- `vote_hash = pedersen_hash([12345, 1])`
 
 ### 증명 생성 및 검증
 
@@ -400,8 +431,11 @@ nargo compile
 # 실행
 nargo execute
 
+# 검증 키 생성
+bb write_vk -b ./target/voting.json -o ./target
+
 # 증명 생성
-bb prove -b ./target/voting.json -w ./target/voting.gz --write-vk -o ./target
+bb prove -b ./target/voting.json -w ./target/voting.gz -o ./target
 
 # 검증
 bb verify -p ./target/proof -k ./target/vk
@@ -479,10 +513,10 @@ fn main(input: Field, output: pub Field) {
 다음 작업들을 직접 수행해보세요:
 
 - [ ] 간단한 회로 작성 (덧셈 검증)
-- [ ] Witness 생성
-- [ ] 증명 생성
-- [ ] 검증 키 생성
-- [ ] 증명 검증
+- [ ] Witness 생성 (`nargo execute`)
+- [ ] 검증 키 생성 (`bb write_vk`) ⚠️ 증명 생성 전 필수!
+- [ ] 증명 생성 (`bb prove`)
+- [ ] 증명 검증 (`bb verify`)
 - [ ] 나이 검증 회로 실행
 - [ ] 비밀번호 해시 회로 실행
 - [ ] Solidity 검증 계약 생성
@@ -516,3 +550,9 @@ A: 네, public input은 증명에 포함되므로 약간 커집니다. 하지만
 
 **Q: Nargo와 bb의 차이는?**
 A: Nargo는 회로 작성 및 컴파일, bb는 증명 생성 및 검증을 담당합니다.
+
+**Q: bb가 네트워크 통신을 하는 이유는?**
+A: 처음 실행 시 CRS (Common Reference String) 파일을 다운로드합니다. 이는 ZKP에 필요한 공개 암호학 파라미터로, 한 번만 다운로드되고 `~/.bb-crs`에 캐시됩니다. 이후에는 완전히 로컬에서 동작합니다.
+
+**Q: "Unable to open file: ./target/vk" 오류가 발생하면?**
+A: 증명 생성 전에 검증 키를 먼저 생성해야 합니다. `bb write_vk -b ./target/circuit.json -o ./target` 명령을 먼저 실행하거나, `bb prove`에 `--write_vk` 플래그를 추가하세요.

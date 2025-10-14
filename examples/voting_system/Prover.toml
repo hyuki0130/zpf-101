@@ -1,0 +1,5 @@
+voter_id = "12345"
+secret_key = "67890"
+vote = "1"
+voter_commitment = "0x0539222e70963aab30360452087fa38862c31537d679aa427324eb8622d34243" # pedersen_hash([12345, 67890])
+vote_hash = "0x0a2117377b0ea781202c90d57ddc28c4a98ad83879c0bc1132cca576ff99e9bf"         # pedersen_hash([12345, 1])
