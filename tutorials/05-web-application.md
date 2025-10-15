@@ -6,6 +6,23 @@
 - 실전 나이 검증 애플리케이션 구축
 - 배포 및 최적화
 
+## ⚠️ 버전 호환성 (중요!)
+
+이 튜토리얼에서 사용하는 **검증된 버전 조합**:
+
+| 도구/패키지 | 버전 | 비고 |
+|-------------|------|------|
+| nargo | 1.0.0-beta.9 | `noirup --version 1.0.0-beta.9` |
+| @noir-lang/noir_js | 1.0.0-beta.9 | Noir 실행 라이브러리 |
+| @aztec/bb.js | 0.87.0 | Barretenberg 백엔드 |
+| vite | ^7.1.10 | 개발 서버 |
+| vite-plugin-node-polyfills | ^0.24.0 | Buffer polyfill |
+
+**⚠️ 주의사항:**
+- 모든 버전이 정확히 일치해야 합니다!
+- nargo 버전과 JS 라이브러리 버전 불일치 시 "Failed to deserialize circuit" 에러 발생
+- 다른 버전 사용 시 예상치 못한 에러 발생 가능
+
 ## 🌐 NoirJS 소개
 
 **NoirJS**는 웹 브라우저에서 Noir 회로를 실행할 수 있게 해주는 JavaScript/TypeScript 라이브러리입니다.
@@ -64,14 +81,19 @@ npm init -y
 ### 2. 필요한 패키지 설치
 
 ```bash
-npm install @noir-lang/noir_js @noir-lang/backend_barretenberg
-npm install --save-dev vite
+npm install @noir-lang/noir_js@1.0.0-beta.9 @aztec/bb.js@0.87.0
+npm install --save-dev vite vite-plugin-node-polyfills
 ```
 
 **패키지 설명:**
-- `@noir-lang/noir_js`: Noir 회로 실행
-- `@noir-lang/backend_barretenberg`: 증명 생성/검증
+- `@noir-lang/noir_js@1.0.0-beta.9`: Noir 회로 실행
+- `@aztec/bb.js@0.87.0`: Barretenberg 백엔드 (증명 생성/검증)
 - `vite`: 빠른 개발 서버 및 빌드 도구
+- `vite-plugin-node-polyfills`: 브라우저용 Node.js polyfills (Buffer 등)
+
+**⚠️ 버전 호환성 중요!**
+- nargo와 JavaScript 패키지 버전이 정확히 일치해야 합니다
+- nargo 1.0.0-beta.9 사용 권장: `noirup --version 1.0.0-beta.9`
 
 ### 3. 프로젝트 구조
 
@@ -96,10 +118,14 @@ noir-age-app/
 
 `circuit/src/main.nr`:
 ```rust
-fn main(age: Field, min_age: pub Field) {
+fn main(age: u8, min_age: pub u8) {
     assert(age >= min_age);
 }
 ```
+
+**타입 선택:**
+- `u8` 사용 (0-255): 나이에 적합하고 효율적
+- `Field`보다 작은 타입으로 증명 크기 감소
 
 **회로 컴파일:**
 ```bash
@@ -107,6 +133,8 @@ cd circuit
 nargo compile
 cd ..
 ```
+
+컴파일 성공 시 `circuit/target/circuit.json` 생성
 
 ### Step 2: HTML 작성
 
@@ -255,7 +283,7 @@ cd ..
 `src/index.js`:
 ```javascript
 import { Noir } from '@noir-lang/noir_js';
-import { BarretenbergBackend, UltraHonkBackend } from '@noir-lang/backend_barretenberg';
+import { UltraHonkBackend } from '@aztec/bb.js';
 import circuit from '../circuit/target/circuit.json';
 
 // DOM 요소
@@ -270,9 +298,10 @@ let backend;
 
 async function initNoir() {
     try {
-        // Noir 및 백엔드 초기화
-        noir = new Noir(circuit);
-        backend = new BarretenbergBackend(circuit);
+        // backend 초기화 (circuit.bytecode 사용)
+        backend = new UltraHonkBackend(circuit.bytecode);
+        // Noir 초기화
+        noir = new Noir(circuit, backend);
 
         console.log('✅ Noir 초기화 완료');
     } catch (error) {
@@ -360,26 +389,33 @@ import { defineConfig } from 'vite';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
 
 export default defineConfig({
+    root: 'src',
     plugins: [
-        nodePolyfills({
-            include: ['buffer', 'process'],
-        }),
+        nodePolyfills(),
     ],
     optimizeDeps: {
         esbuildOptions: {
             target: 'esnext',
         },
+        exclude: ['@noir-lang/noirc_abi', '@noir-lang/acvm_js', '@aztec/bb.js'],
     },
     build: {
         target: 'esnext',
     },
+    server: {
+        headers: {
+            'Cross-Origin-Opener-Policy': 'same-origin',
+            'Cross-Origin-Embedder-Policy': 'require-corp',
+        },
+    },
 });
 ```
 
-**설치:**
-```bash
-npm install --save-dev vite-plugin-node-polyfills
-```
+**주요 설정 설명:**
+- `root: 'src'`: src 디렉토리를 루트로 설정
+- `nodePolyfills()`: Buffer 등 Node.js polyfills 자동 추가
+- `exclude`: WASM을 사용하는 패키지는 번들링 제외 (중요!)
+- `COOP/COEP 헤더`: SharedArrayBuffer 사용을 위한 보안 헤더
 
 ### Step 5: package.json 스크립트
 
@@ -388,22 +424,28 @@ npm install --save-dev vite-plugin-node-polyfills
 {
   "name": "noir-age-app",
   "version": "1.0.0",
-  "type": "module",
+  "type": "commonjs",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"
   },
   "dependencies": {
-    "@noir-lang/backend_barretenberg": "^0.20.0",
-    "@noir-lang/noir_js": "^0.20.0"
+    "@aztec/bb.js": "0.87.0",
+    "@noir-lang/noir_js": "1.0.0-beta.9"
   },
   "devDependencies": {
-    "vite": "^5.0.0",
-    "vite-plugin-node-polyfills": "^0.19.0"
+    "vite": "^7.1.10",
+    "vite-plugin-node-polyfills": "^0.24.0"
   }
 }
 ```
+
+**중요한 변경사항:**
+- `type: "commonjs"`: CommonJS 모듈 시스템 사용
+- `@aztec/bb.js@0.87.0`: 공식 Barretenberg 백엔드 (이전: @noir-lang/backend_barretenberg)
+- `@noir-lang/noir_js@1.0.0-beta.9`: Noir JS 라이브러리
+- 버전 고정: `^` 제거하여 정확한 버전 사용 (호환성 보장)
 
 ### Step 6: 실행
 
@@ -413,6 +455,77 @@ npm run dev
 ```
 
 브라우저에서 `http://localhost:5173` 접속!
+
+**브라우저 콘솔에서 확인:**
+```
+✅ Noir 초기화 완료
+📝 Witness 생성 중...
+✅ Witness 생성 완료
+🔒 증명 생성 중...
+✅ 증명 생성 완료
+증명 크기: xxxxx bytes
+🔍 증명 검증 중...
+```
+
+## ⚠️ 문제 해결 (Troubleshooting)
+
+### 1. "Buffer is not defined" 에러
+
+**원인**: Node.js Buffer polyfill 누락
+
+**해결**:
+```bash
+npm install vite-plugin-node-polyfills --save-dev
+```
+
+vite.config.js에 추가:
+```javascript
+import { nodePolyfills } from 'vite-plugin-node-polyfills';
+
+export default defineConfig({
+    plugins: [nodePolyfills()],
+});
+```
+
+### 2. "main.worker.js does not exist" 에러
+
+**원인**: @aztec/bb.js가 Web Worker를 사용하는데 Vite가 번들링하면서 경로가 깨짐
+
+**해결**: vite.config.js의 `optimizeDeps.exclude`에 추가
+```javascript
+exclude: ['@noir-lang/noirc_abi', '@noir-lang/acvm_js', '@aztec/bb.js']
+```
+
+### 3. "Failed to deserialize circuit" 에러
+
+**원인**: nargo 버전과 JavaScript 라이브러리 버전 불일치
+
+**해결**:
+```bash
+# nargo 버전 확인
+nargo --version
+
+# 일치하는 버전 설치
+noirup --version 1.0.0-beta.9
+npm install @noir-lang/noir_js@1.0.0-beta.9 @aztec/bb.js@0.87.0
+
+# circuit 재컴파일
+cd circuit && nargo compile && cd ..
+```
+
+### 4. COOP/COEP 헤더 관련 에러
+
+**원인**: SharedArrayBuffer 사용을 위한 보안 헤더 누락
+
+**해결**: vite.config.js에 추가
+```javascript
+server: {
+    headers: {
+        'Cross-Origin-Opener-Policy': 'same-origin',
+        'Cross-Origin-Embedder-Policy': 'require-corp',
+    },
+}
+```
 
 ## 🚀 고급 기능 추가
 
@@ -537,13 +650,13 @@ async function verifyOnChain(proof, publicInputs) {
 `worker.js`:
 ```javascript
 import { Noir } from '@noir-lang/noir_js';
-import { BarretenbergBackend } from '@noir-lang/backend_barretenberg';
+import { UltraHonkBackend } from '@aztec/bb.js';
 
 self.onmessage = async (e) => {
     const { circuit, inputs } = e.data;
 
-    const noir = new Noir(circuit);
-    const backend = new BarretenbergBackend(circuit);
+    const backend = new UltraHonkBackend(circuit.bytecode);
+    const noir = new Noir(circuit, backend);
 
     const { witness } = await noir.execute(inputs);
     const proof = await backend.generateProof(witness);
@@ -702,11 +815,15 @@ try {
 
 ## ✅ 완성 체크리스트
 
-- [ ] NoirJS 프로젝트 설정
-- [ ] 회로 컴파일
+- [ ] nargo 버전 확인 (1.0.0-beta.9 권장)
+- [ ] 패키지 설치 (@noir-lang/noir_js@1.0.0-beta.9, @aztec/bb.js@0.87.0)
+- [ ] vite-plugin-node-polyfills 설치
+- [ ] 회로 작성 및 컴파일
 - [ ] HTML/CSS 작성
-- [ ] JavaScript 로직 구현
+- [ ] JavaScript 로직 구현 (UltraHonkBackend 사용)
+- [ ] vite.config.js 설정 (exclude, COOP/COEP 헤더)
 - [ ] 로컬에서 테스트
+- [ ] 브라우저 콘솔에서 로그 확인
 - [ ] 증명 생성 확인
 - [ ] 증명 검증 확인
 - [ ] 배포
@@ -723,10 +840,22 @@ try {
 
 ## 📚 추가 리소스
 
+- [Noir 공식 튜토리얼](https://noir-lang.org/docs/tutorials/noirjs_app) - 이 튜토리얼의 기반
 - [NoirJS API 문서](https://noir-lang.org/docs/tooling/noir_js)
-- [Barretenberg.js 문서](https://barretenberg.aztec.network)
+- [Barretenberg 문서](https://barretenberg.aztec.network)
+- [@aztec/bb.js GitHub](https://github.com/AztecProtocol/aztec-packages/tree/master/barretenberg/ts)
 - [예제 프로젝트](https://github.com/noir-lang/awesome-noir)
 - [Noir Discord](https://discord.gg/JtqzkdeQ6G)
+
+### 실습 예제
+
+이 저장소의 `examples/noir-age-app/` 디렉토리에서 완성된 코드를 확인할 수 있습니다:
+
+```bash
+cd examples/noir-age-app
+npm install
+npm run dev
+```
 
 ## 💡 프로젝트 아이디어
 
