@@ -15,6 +15,7 @@ vk
 # Environment
 .env
 .env.local
+.vite/
 
 # IDE
 .vscode/
