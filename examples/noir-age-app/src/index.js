@@ -34,10 +34,10 @@ form.addEventListener('submit', async (e) => {
     const minAge = parseInt(document.getElementById('minAge').value);
 
     // 입력값 검증
-    if (age < minAge) {
-        showResult(`❌ 나이가 최소 요구사항(${minAge}세)을 만족하지 않습니다.`, false);
-        return;
-    }
+    // if (age < minAge) {
+    //     showResult(`❌ 나이가 최소 요구사항(${minAge}세)을 만족하지 않습니다.`, false);
+    //     return;
+    // }
 
     // UI 업데이트
     submitBtn.disabled = true;
@@ -79,7 +79,18 @@ form.addEventListener('submit', async (e) => {
 
     } catch (error) {
         console.error('오류:', error);
-        showResult('❌ 오류 발생: ' + error.message, false);
+
+        // "Cannot satisfy constraint" 에러 처리
+        if (error.message && error.message.includes('Cannot satisfy constraint')) {
+            showResult(
+                `❌ 증명 생성 실패!\n\n` +
+                `입력하신 나이(${age}세)가 최소 요구사항(${minAge}세)을 만족하지 않습니다.\n\n` +
+                `제로 지식 증명은 참인 명제만 증명할 수 있습니다.`,
+                false
+            );
+        } else {
+            showResult('❌ 오류 발생: ' + error.message, false);
+        }
     } finally {
         submitBtn.disabled = false;
         loading.style.display = 'none';
