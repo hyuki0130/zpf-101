@@ -36,12 +36,22 @@
             font-weight: bold;
         }
 
-        input {
+        input, select {
             width: 100%;
             padding: 10px;
             border: none;
             border-radius: 5px;
             font-size: 16px;
+            box-sizing: border-box;
+        }
+
+        select {
+            background: white;
+            cursor: pointer;
+        }
+
+        select:focus {
+            outline: 2px solid #4CAF50;
         }
 
         button {
@@ -117,6 +127,14 @@
                 <label for="minAge">최소 나이 요구사항 (공개):</label>
                 <input type="number" id="minAge" required min="1" max="150"
                        value="18" placeholder="예: 18">
+            </div>
+
+            <div class="form-group">
+                <label for="verifyMode">검증 방식:</label>
+                <select id="verifyMode">
+                    <option value="offchain">오프체인 (브라우저 로컬 - 빠름, 무료)</option>
+                    <option value="onchain">온체인 (Sepolia 블록체인 - 느림, Gas 발생, MetaMask 필요)</option>
+                </select>
             </div>
 
             <button type="submit" id="submitBtn">
